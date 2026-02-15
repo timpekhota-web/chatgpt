@@ -3,9 +3,12 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: light;
+  color-scheme: dark;
 }
 
 body {
-  @apply bg-slate-50 text-slate-900;
+  @apply min-h-screen bg-[#050510] text-slate-100;
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(0, 255, 255, 0.15), transparent 30%),
+    radial-gradient(circle at 80% 0%, rgba(255, 0, 255, 0.14), transparent 30%);
 }

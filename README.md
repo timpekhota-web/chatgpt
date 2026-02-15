@@ -41,6 +41,9 @@ Kompletny projekt sklepu internetowego i panelu admina oparty o **Next.js App Ro
 
 
 ## Wygodny panel admina
+- styl dark web 2000 (ciemny neonowy interfejs),
+- cena wpisywana w PLN (automatycznie konwertowana do groszy dla API),
+- czytelne błędy walidacji z API (co dokładnie jest niepoprawne),
 - przycisk **Dodaj przykładowe produkty** (seed),
 - automatyczne generowanie sluga z nazwy,
 - szybkie szablony produktu do formularza,

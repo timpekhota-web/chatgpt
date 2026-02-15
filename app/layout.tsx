@@ -15,12 +15,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="pl">
       <body>
-        <header className="border-b bg-white">
+        <header className="border-b border-fuchsia-500/30 bg-black/60 backdrop-blur">
           <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-            <Link href="/" className="text-xl font-semibold">
+            <Link href="/" className="text-xl font-semibold text-cyan-300">
               Startup Shop
             </Link>
-            <div className="flex gap-4 text-sm">
+            <div className="flex gap-4 text-sm text-slate-200">
               <Link href="/products">Produkty</Link>
               <Link href="/checkout">Koszyk</Link>
               <Link href="/admin">Admin</Link>
