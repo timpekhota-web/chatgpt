@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 
 type Product = {
   id: string;
@@ -12,7 +12,16 @@ type Product = {
   imageUrl: string;
 };
 
-const initialForm = {
+type ProductForm = {
+  name: string;
+  slug: string;
+  description: string;
+  price: number;
+  stock: number;
+  imageUrl: string;
+};
+
+const initialForm: ProductForm = {
   name: '',
   slug: '',
   description: '',
@@ -21,11 +30,46 @@ const initialForm = {
   imageUrl: ''
 };
 
+function slugify(text: string) {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-');
+}
+
+const quickTemplates: ProductForm[] = [
+  {
+    name: 'Czapka Team Ops',
+    slug: 'czapka-team-ops',
+    description: 'Lekka czapka z daszkiem dla zespołów operacyjnych i supportu.',
+    price: 6900,
+    stock: 60,
+    imageUrl: 'https://res.cloudinary.com/demo/image/upload/v1690000000/startup-cap.jpg'
+  },
+  {
+    name: 'Notatnik Founder Notes',
+    slug: 'notatnik-founder-notes',
+    description: 'Notatnik A5 do roadmap, OKR i sprint planningu.',
+    price: 3900,
+    stock: 100,
+    imageUrl: 'https://res.cloudinary.com/demo/image/upload/v1690000000/startup-notebook.jpg'
+  }
+];
+
 export default function AdminPage() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [credentials, setCredentials] = useState({ username: '', password: '' });
   const [products, setProducts] = useState<Product[]>([]);
-  const [form, setForm] = useState(initialForm);
+  const [form, setForm] = useState<ProductForm>(initialForm);
+  const [status, setStatus] = useState<string>('');
+  const [busy, setBusy] = useState(false);
+
+  const canSubmit = useMemo(
+    () => form.name && form.slug && form.description && form.price > 0 && form.stock >= 0 && form.imageUrl,
+    [form]
+  );
 
   const fetchProducts = async () => {
     const res = await fetch('/api/products');
@@ -40,26 +84,73 @@ export default function AdminPage() {
 
   const login = async (e: FormEvent) => {
     e.preventDefault();
+    setStatus('Logowanie...');
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(credentials)
     });
-    if (res.ok) setLoggedIn(true);
+
+    if (res.ok) {
+      setLoggedIn(true);
+      setStatus('Zalogowano poprawnie.');
+      return;
+    }
+
+    setStatus('Błędny login lub hasło.');
   };
 
   const createProduct = async (e: FormEvent) => {
     e.preventDefault();
+    if (!canSubmit) return;
+    setBusy(true);
+    setStatus('Zapisywanie produktu...');
+
     const res = await fetch('/api/products', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form)
     });
 
+    setBusy(false);
+
     if (res.ok) {
       setForm(initialForm);
+      setStatus('Produkt został dodany.');
       fetchProducts();
+      return;
     }
+
+    setStatus('Nie udało się dodać produktu. Sprawdź dane formularza.');
+  };
+
+  const deleteProduct = async (id: string) => {
+    setBusy(true);
+    const res = await fetch(`/api/products/${id}`, { method: 'DELETE' });
+    setBusy(false);
+
+    if (res.ok) {
+      setStatus('Produkt usunięty.');
+      fetchProducts();
+      return;
+    }
+
+    setStatus('Błąd podczas usuwania produktu.');
+  };
+
+  const seedProducts = async () => {
+    setBusy(true);
+    setStatus('Dodawanie przykładowych produktów...');
+    const res = await fetch('/api/products/seed', { method: 'POST' });
+    setBusy(false);
+
+    if (res.ok) {
+      setStatus('Przykładowe produkty dodane/zaktualizowane.');
+      fetchProducts();
+      return;
+    }
+
+    setStatus('Nie udało się dodać przykładowych produktów.');
   };
 
   if (!loggedIn) {
@@ -80,38 +171,141 @@ export default function AdminPage() {
           onChange={(e) => setCredentials((prev) => ({ ...prev, password: e.target.value }))}
         />
         <button className="w-full rounded bg-slate-900 py-2 text-white">Zaloguj</button>
+        {status ? <p className="text-sm text-slate-500">{status}</p> : null}
       </form>
     );
   }
 
   return (
     <div className="space-y-8">
-      <h1 className="text-3xl font-bold">Dashboard admina</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-3xl font-bold">Dashboard admina</h1>
+        <button
+          onClick={seedProducts}
+          disabled={busy}
+          className="rounded bg-emerald-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+        >
+          Dodaj przykładowe produkty
+        </button>
+      </div>
 
-      <form onSubmit={createProduct} className="grid gap-3 rounded border bg-white p-4 md:grid-cols-2">
-        {Object.keys(form).map((key) => (
-          <input
-            key={key}
-            className="rounded border p-2"
-            placeholder={key}
-            type={key === 'price' || key === 'stock' ? 'number' : 'text'}
-            value={(form as any)[key]}
-            onChange={(e) =>
-              setForm((prev) => ({
-                ...prev,
-                [key]: key === 'price' || key === 'stock' ? Number(e.target.value) : e.target.value
-              }))
-            }
-          />
-        ))}
-        <button className="rounded bg-blue-600 px-4 py-2 text-white md:col-span-2">Dodaj produkt</button>
+      <form onSubmit={createProduct} className="space-y-4 rounded border bg-white p-4">
+        <h2 className="text-lg font-semibold">Dodaj nowy produkt</h2>
+
+        <div className="grid gap-3 md:grid-cols-2">
+          <label className="space-y-1">
+            <span className="text-sm text-slate-600">Nazwa</span>
+            <input
+              className="w-full rounded border p-2"
+              placeholder="np. Koszulka Premium"
+              value={form.name}
+              onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+            />
+          </label>
+
+          <label className="space-y-1">
+            <span className="text-sm text-slate-600">Slug</span>
+            <div className="flex gap-2">
+              <input
+                className="w-full rounded border p-2"
+                placeholder="np. koszulka-premium"
+                value={form.slug}
+                onChange={(e) => setForm((prev) => ({ ...prev, slug: e.target.value }))}
+              />
+              <button
+                type="button"
+                className="rounded border px-3 text-sm"
+                onClick={() => setForm((prev) => ({ ...prev, slug: slugify(prev.name) }))}
+              >
+                Auto
+              </button>
+            </div>
+          </label>
+
+          <label className="space-y-1 md:col-span-2">
+            <span className="text-sm text-slate-600">Opis</span>
+            <textarea
+              className="w-full rounded border p-2"
+              rows={3}
+              placeholder="Krótki opis produktu"
+              value={form.description}
+              onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
+            />
+          </label>
+
+          <label className="space-y-1">
+            <span className="text-sm text-slate-600">Cena (grosze)</span>
+            <input
+              className="w-full rounded border p-2"
+              type="number"
+              min={1}
+              value={form.price}
+              onChange={(e) => setForm((prev) => ({ ...prev, price: Number(e.target.value) }))}
+            />
+          </label>
+
+          <label className="space-y-1">
+            <span className="text-sm text-slate-600">Stan magazynu</span>
+            <input
+              className="w-full rounded border p-2"
+              type="number"
+              min={0}
+              value={form.stock}
+              onChange={(e) => setForm((prev) => ({ ...prev, stock: Number(e.target.value) }))}
+            />
+          </label>
+
+          <label className="space-y-1 md:col-span-2">
+            <span className="text-sm text-slate-600">URL zdjęcia</span>
+            <input
+              className="w-full rounded border p-2"
+              placeholder="https://..."
+              value={form.imageUrl}
+              onChange={(e) => setForm((prev) => ({ ...prev, imageUrl: e.target.value }))}
+            />
+          </label>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {quickTemplates.map((template) => (
+            <button
+              key={template.slug}
+              type="button"
+              className="rounded border px-3 py-1 text-sm"
+              onClick={() => setForm(template)}
+            >
+              Użyj szablonu: {template.name}
+            </button>
+          ))}
+        </div>
+
+        <button
+          disabled={!canSubmit || busy}
+          className="rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-60"
+        >
+          Dodaj produkt
+        </button>
       </form>
+
+      {status ? <p className="rounded bg-slate-100 p-3 text-sm text-slate-700">{status}</p> : null}
 
       <div className="space-y-3">
         {products.map((product) => (
-          <div key={product.id} className="rounded border bg-white p-3">
-            <p className="font-medium">{product.name}</p>
-            <p className="text-sm text-slate-600">{product.slug}</p>
+          <div key={product.id} className="flex items-center justify-between rounded border bg-white p-3">
+            <div>
+              <p className="font-medium">{product.name}</p>
+              <p className="text-sm text-slate-600">/{product.slug}</p>
+              <p className="text-sm text-slate-500">
+                {(product.price / 100).toFixed(2)} PLN • stock: {product.stock}
+              </p>
+            </div>
+            <button
+              onClick={() => deleteProduct(product.id)}
+              disabled={busy}
+              className="rounded border border-red-300 px-3 py-1 text-sm text-red-600 disabled:opacity-60"
+            >
+              Usuń
+            </button>
           </div>
         ))}
       </div>

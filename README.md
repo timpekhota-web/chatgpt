@@ -30,6 +30,7 @@ Kompletny projekt sklepu internetowego i panelu admina oparty o **Next.js App Ro
 - `GET /api/products`
 - `GET /api/products/:id`
 - `POST /api/products` (admin)
+- `POST /api/products/seed` (admin, dodaje przykładowe produkty)
 - `PUT /api/products/:id` (admin)
 - `DELETE /api/products/:id` (admin)
 - `POST /api/checkout`
@@ -37,6 +38,13 @@ Kompletny projekt sklepu internetowego i panelu admina oparty o **Next.js App Ro
 - `POST /api/upload` (admin)
 - `POST /api/auth/login`
 - `GET /api/auth/me`
+
+
+## Wygodny panel admina
+- przycisk **Dodaj przykładowe produkty** (seed),
+- automatyczne generowanie sluga z nazwy,
+- szybkie szablony produktu do formularza,
+- statusy operacji i szybkie usuwanie produktu z listy.
 
 ## Stripe workflow
 1. Frontend wysyła `items` do `/api/checkout`.
