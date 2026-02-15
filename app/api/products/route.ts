@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { assertAdmin } from '@/lib/auth';
 import { productSchema } from '@/lib/validation';
@@ -21,6 +22,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const product = await prisma.product.create({ data: parsed.data });
-  return NextResponse.json({ product }, { status: 201 });
+  try {
+    const product = await prisma.product.create({ data: parsed.data });
+    return NextResponse.json({ product }, { status: 201 });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return NextResponse.json({ error: 'Slug już istnieje. Użyj innego sluga.' }, { status: 409 });
+    }
+
+    return NextResponse.json({ error: 'Nie udało się zapisać produktu.' }, { status: 500 });
+  }
 }
